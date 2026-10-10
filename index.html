@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SUFYAN CRYPTO BOARD</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;padding:20px;
+  background:#0b1020;color:white;
+  font-family:Arial,sans-serif
+}
+.container{max-width:600px;margin:auto}
+h1{color:#54e6b5;text-align:center;font-size:27px}
+.sub{text-align:center;color:#aab3ca}
+.card{
+  background:#151d32;border:1px solid #293653;
+  border-radius:16px;padding:20px;margin:16px 0
+}
+.label{color:#aab3ca;font-size:14px}
+.price{font-size:34px;font-weight:bold;margin:12px 0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.value{font-size:22px;font-weight:bold;margin-top:10px}
+.signal{
+  text-align:center;font-size:30px;font-weight:bold;
+  padding:18px;border-radius:12px;background:#202b43
+}
+button{
+  width:100%;padding:14px;border:0;border-radius:10px;
+  background:#54e6b5;color:#07111b;font-size:16px;
+  font-weight:bold
+}
+.note{font-size:12px;color:#aab3ca;line-height:1.6}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h1>🚀 SUFYAN CRYPTO BOARD</h1>
+<p class="sub">BTC/USDT • Live Market Practice</p>
+
+<div class="card">
+  <div class="label">BITCOIN CURRENT PRICE</div>
+  <div class="price" id="price">Loading...</div>
+  <div class="label" id="updated">Connecting to market...</div>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <div class="label">RSI (14)</div>
+    <div class="value" id="rsi">--</div>
+  </div>
+  <div class="card">
+    <div class="label">MA 7</div>
+    <div class="value" id="ma7">--</div>
+  </div>
+  <div class="card">
+    <div class="label">MA 25</div>
+    <div class="value" id="ma25">--</div>
+  </div>
+  <div class="card">
+    <div class="label">Market</div>
+    <div class="value" id="market">--</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="label">PRACTICE SIGNAL</div>
+  <div class="signal" id="signal">WAITING...</div>
+  <p class="note" id="reason">Calculating indicators...</p>
+</div>
+
+<button onclick="loadData()">🔄 Refresh Market</button>
+
+<p class="note">
+  ⚠️ Educational practice signals only. BUY/SELL does not guarantee
+  profit. This dashboard does not place trades or handle your money.
+  Market data may be delayed or temporarily unavailable.
+</p>
+
+</div>
+
+<script>
+const api =
+"https://data-api.binance.vision/api/v3/klines?symbol=BTCUSDT&interval=1m&limit=100";
+
+function average(arr){
+  return arr.reduce((a,b)=>a+b,0)/arr.length;
+}
+
+function calculateRSI(prices){
+  let gains=0, losses=0;
+  for(let i=prices.length-14;i<prices.length;i++){
+    const change=prices[i]-prices[i-1];
+    if(change>0) gains+=change;
+    else losses-=change;
+  }
+  if(losses===0) return 100;
+  return 100-(100/(1+gains/losses));
+}
+
+async function loadData(){
+  document.getElementById("updated").textContent="Updating...";
+  try{
+    const response=await fetch(api);
+    if(!response.ok) throw new Error("Market data unavailable");
+    const data=await response.json();
+
+    const prices=data.map(c=>Number(c[4]));
+    const price=prices[prices.length-1];
+    const ma7=average(prices.slice(-7));
+    const ma25=average(prices.slice(-25));
+    const rsi=calculateRSI(prices);
+
+    document.getElementById("price").textContent=
+      "$"+price.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+    document.getElementById("rsi").textContent=rsi.toFixed(2);
+    document.getElementById("ma7").textContent=ma7.toFixed(2);
+    document.getElementById("ma25").textContent=ma25.toFixed(2);
+    document.getElementById("market").textContent=
+      ma7>ma25?"Bullish":"Bearish";
+
+    let signal="HOLD";
+    let reason="No clear signal. Wait and observe.";
+
+    if(ma7>ma25 && rsi>50 && rsi<70){
+      signal="BUY";
+      reason="MA 7 is above MA 25 and RSI is between 50 and 70.";
+    }else if(ma7<ma25 && rsi<50 && rsi>30){
+      signal="SELL";
+      reason="MA 7 is below MA 25 and RSI is between 30 and 50.";
+    }
+
+    document.getElementById("signal").textContent=signal;
+    document.getElementById("reason").textContent=reason;
+    document.getElementById("updated").textContent=
+      "Last updated: "+new Date().toLocaleTimeString();
+
+  }catch(error){
+    document.getElementById("updated").textContent=
+      "Connection error. Please try again.";
+    document.getElementById("reason").textContent=
+      "Market data could not load. Check your internet and refresh.";
+  }
+}
+
+loadData();
+setInterval(loadData,60000);
+</script>
+</body>
+</html>
